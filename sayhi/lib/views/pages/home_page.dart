@@ -1,14 +1,14 @@
 // lib/views/pages/home_page.dart
 import 'package:flutter/material.dart';
 
-class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  State<HomePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<HomePage> {
   TextEditingController controller = TextEditingController();
   bool? checkedValue = false;
   bool isSwitched = false;
