@@ -1,9 +1,22 @@
-import 'package:flutter/foundation.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'data/notifiers.dart';
 import 'views/widget_tree.dart';
+import 'package:network_tools/network_tools.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    final tempDir = Directory.systemTemp.path;
+    await configureNetworkTools(tempDir, enableDebugging: true);
+    debugPrint('✅ Network tools configured globally in: $tempDir');
+  } catch (e) {
+    debugPrint(
+      '⚠️ Network tools config warning (safe to ignore on hot restart): $e',
+    );
+  }
+
   runApp(const MyApp());
 }
 
@@ -24,7 +37,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
 
-          home: WidgetTree(),
+          home: const WidgetTree(),
         );
       },
     );
