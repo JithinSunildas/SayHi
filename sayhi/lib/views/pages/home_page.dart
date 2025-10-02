@@ -1,554 +1,281 @@
-import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:network_tools/network_tools.dart';
-import 'package:network_info_plus/network_info_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:sayhi/data/notifiers.dart';
+import '../../data/notifiers.dart';
+import '../pages/scanner_page.dart';
+import '../../data/models.dart';
 
-void main() {
-  runApp(const NetworkScannerApp());
-}
+class SystemHomePage extends StatefulWidget {
+  final Device device;
 
-class NetworkScannerApp extends StatelessWidget {
-  const NetworkScannerApp({super.key});
+  const SystemHomePage({super.key, required this.device});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Local Network Scanner',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-        fontFamily: 'Inter',
-      ),
-      home: const Scaffold(
-        appBar: null,
-        body: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(12.0),
-            child: NetworkScannerPage(),
-          ),
-        ),
-      ),
-    );
-  }
+  State<SystemHomePage> createState() => _SystemHomePageState();
 }
 
-/// Model for device information
-class Device {
-  final String ip;
-  List<int> openPorts;
-
-  Device({required this.ip, this.openPorts = const []});
-}
-
-class NetworkScannerPage extends StatefulWidget {
-  const NetworkScannerPage({super.key});
-
-  @override
-  State<NetworkScannerPage> createState() => _NetworkScannerPageState();
-}
-
-class _NetworkScannerPageState extends State<NetworkScannerPage> {
-  // State management
-  bool _isScanning = false;
-  String _statusMessage = 'Ready to scan';
-  final Set<Device> _devices = {};
-  StreamSubscription<ActiveHost>? _scanSubscription;
-
-  // Scroll State for FAB visibility
-  late ScrollController _scrollController;
-  bool _fabVisible = true;
+class _SystemHomePageState extends State<SystemHomePage> {
+  SystemInfo? _systemInfo;
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
-    _scrollController.addListener(_scrollListener);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startScan());
+    _fetchSystemInfo();
   }
 
-  @override
-  void dispose() {
-    _scanSubscription?.cancel();
-    _scrollController.removeListener(_scrollListener);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  // Listener to hide/show FAB on scroll
-  void _scrollListener() {
-    if (_scrollController.position.userScrollDirection ==
-        ScrollDirection.reverse) {
-      if (_fabVisible) {
-        setState(() => _fabVisible = false);
-      }
-    } else if (_scrollController.position.userScrollDirection ==
-        ScrollDirection.forward) {
-      if (!_fabVisible) {
-        setState(() => _fabVisible = true);
-      }
-    }
-  }
-
-  /// Request necessary permissions for network scanning
-  Future<bool> _requestPermissions() async {
-    debugPrint('🔐 Requesting permissions...');
-
-    if (Platform.isAndroid) {
-      final nearbyStatus = await Permission.nearbyWifiDevices.request();
-      final locationStatus = await Permission.locationWhenInUse.request();
-
-      if (!nearbyStatus.isGranted && !locationStatus.isGranted) {
-        _showError(
-          'Location and Nearby WiFi Devices permissions are required for scanning.',
-        );
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /// Get current WiFi subnet
-  Future<String?> _getSubnet() async {
-    try {
-      final wifiIP = await NetworkInfo().getWifiIP();
-      if (wifiIP == null || wifiIP.isEmpty) {
-        _showError('Not connected to WiFi');
-        return null;
-      }
-      final subnet = wifiIP.substring(0, wifiIP.lastIndexOf('.'));
-      return subnet;
-    } catch (e) {
-      _showError('Failed to get network info: $e');
-      return null;
-    }
-  }
-
-  /// Main scan function
-  Future<void> _startScan() async {
-    await _scanSubscription?.cancel();
-
+  // --- Simulate HTTP Request to Spring Boot ---
+  Future<void> _fetchSystemInfo() async {
     setState(() {
-      _isScanning = true;
-      _statusMessage = 'Requesting permissions...';
-      _devices.clear();
-      _fabVisible = true;
+      _isLoading = true;
+      _error = null;
     });
 
-    final hasPermissions = await _requestPermissions();
-    if (!hasPermissions) {
-      setState(() {
-        _isScanning = false;
-        _statusMessage = 'Permission denied';
-      });
-      return;
-    }
-
-    setState(() => _statusMessage = 'Getting network info...');
-    final subnet = await _getSubnet();
-
-    if (subnet == null) {
-      setState(() {
-        _isScanning = false;
-        _statusMessage = 'Failed to get network info';
-      });
-      return;
-    }
-
-    setState(() => _statusMessage = 'Scanning network...');
-
     try {
-      try {
-        final tempDir = Directory.systemTemp.path;
-        await configureNetworkTools(tempDir, enableDebugging: false);
-      } catch (e) {
-        debugPrint('⚠️ Config attempt: $e');
-      }
+      // 1. SIMULATE API CALL
+      // In a real app, this would be:
+      // final response = await http.get(Uri.parse('http://${widget.device.ip}:8080/api/sysinfo'));
+      // final data = json.decode(response.body);
 
-      final stream = HostScannerService.instance.getAllPingableDevices(
-        subnet,
-        firstHostId: 1,
-        lastHostId: 254,
-        progressCallback: (progress) {
-          debugPrint('📊 Scan progress: ${progress.toStringAsFixed(1)}%');
-        },
-      );
+      await Future.delayed(
+        const Duration(milliseconds: 1500),
+      ); // Simulate network latency
 
-      _scanSubscription = stream.listen(
-        (host) {
-          if (_devices.any((d) => d.ip == host.address)) return;
+      // 2. SIMULATE SERVER RESPONSE (JSON)
+      // The device IP is used to simulate different server responses.
+      final mockData = widget.device.ip.endsWith('.1')
+          ? {
+              'os': 'Linux (Ubuntu 22.04 LTS)',
+              'cpu': 'Intel Core i7-12700K',
+              'ram': '16 GB / 32 GB Used',
+              'cpu_load': 45.5,
+            }
+          : {
+              'os': 'Windows 11 Pro',
+              'cpu': 'AMD Ryzen 7 5800X',
+              'ram': '8 GB / 64 GB Used',
+              'cpu_load': 12.8,
+            };
 
-          final device = Device(ip: host.address);
-          setState(() {
-            _devices.add(device);
-            _statusMessage = 'Found ${_devices.length} device(s)';
-          });
-        },
-        onDone: () {
-          setState(() {
-            _isScanning = false;
-            _statusMessage =
-                'Scan complete - ${_devices.length} device(s) found';
-          });
-        },
-        onError: (error) {
-          setState(() {
-            _isScanning = false;
-            _statusMessage = 'Scan failed';
-          });
-          _showError('Scan error: $error');
-        },
-        cancelOnError: true,
-      );
-    } catch (e) {
+      if (!mounted) return;
+
       setState(() {
-        _isScanning = false;
-        _statusMessage = 'Scan failed';
+        _systemInfo = SystemInfo.fromJson(mockData);
+        _isLoading = false;
       });
-      _showError('Failed to start scan: $e');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error =
+            'Failed to fetch system info from ${widget.device.ip}. Error: $e';
+        _isLoading = false;
+      });
     }
   }
 
-  /// Scan ports for a specific device
-  Future<List<int>> _scanPorts(String ip) async {
-    final openPorts = <int>[];
-    // Common ports list for speed
-    final commonPorts = [21, 22, 23, 80, 443, 3389, 8080, 8443];
-
-    for (final port in commonPorts) {
-      try {
-        final isOpen = await PortScannerService.instance.isOpen(
-          ip,
-          port,
-          timeout: const Duration(milliseconds: 500),
-        );
-        if (isOpen == true) {
-          openPorts.add(port);
-        }
-      } catch (e) {
-        // Ignore port errors
-      }
-    }
-    return openPorts;
-  }
-
-  /// Placeholder function for sending a pair request
-  void _sendPairRequest(Device device) {
-    // This is called after the details dialog is closed.
-    _showError('Pair request sent to ${device.ip}. Awaiting response...');
-  }
-
-  /// Displays device details (after port scan) and offers pairing options.
-  Future<void> _showDeviceDetailsAndPairingOptions(Device device) async {
-    if (!mounted) return;
-
-    // 1. Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    // 2. Perform port scan
-    final ports = await _scanPorts(device.ip);
-
-    if (!mounted) return;
-    Navigator.pop(context); // Close loading dialog
-
-    // 3. Update state with new port data
-    setState(() {
-      device.openPorts = ports;
-    });
-
-    // 4. Show combined details and action dialog
-    showDialog(
-      context: context,
-      builder: (context) {
-        final colorScheme = Theme.of(context).colorScheme;
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
-          ),
-          title: Text('Device Details: ${device.ip}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDetailRow('IP Address', device.ip),
-              const SizedBox(height: 16),
-              _buildDetailRow(
-                'Open Ports',
-                ports.isEmpty ? 'None detected' : ports.join(', '),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-            // Pair Request Action
-            TextButton.icon(
-              icon: Icon(Icons.handshake, color: colorScheme.primary),
-              label: const Text('Pair Request'),
-              onPressed: () {
-                Navigator.pop(context); // Close details dialog
-                _sendPairRequest(device);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 90,
-          child: Text(
-            '$label:',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-        Expanded(child: Text(value)),
-      ],
-    );
-  }
-
-  void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-        action: SnackBarAction(
-          label: 'DISMISS',
-          textColor: Colors.white,
-          onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
-        ),
-      ),
-    );
+  void _disconnect() {
+    currentConnectedDevice.value =
+        null; // Clears the global state, triggering navigation back to scanner
   }
 
   @override
   Widget build(BuildContext context) {
-    final sortedDevices = _devices.toList()
-      ..sort((a, b) => a.ip.compareTo(b.ip));
-
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
-      backgroundColor: colorScheme.background,
       appBar: AppBar(
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(15.0)),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
-          },
-        ),
-        title: Text('SayHi'),
-        centerTitle: true,
+        title: Text('${widget.device.hostname} Control'),
+        backgroundColor: Colors.teal.shade700,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
-            onPressed: () {
-              selectedBrightnessMode.value = !selectedBrightnessMode.value;
-            },
-            icon: ValueListenableBuilder(
-              valueListenable: selectedBrightnessMode,
-              builder: (context, isDarkMode, child) {
-                if (isDarkMode == true) {
-                  return Icon(Icons.light_mode_rounded);
-                } else {
-                  return Icon(Icons.dark_mode_rounded);
-                }
-              },
-            ),
+            icon: const Icon(Icons.refresh),
+            onPressed: _isLoading ? null : _fetchSystemInfo,
           ),
+          IconButton(icon: const Icon(Icons.logout), onPressed: _disconnect),
         ],
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 20),
-          // Header section
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(15.0),
-              boxShadow: [
-                BoxShadow(
-                  color: colorScheme.primary.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Local Network Scan',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onPrimaryContainer,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (_isScanning)
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                    if (_isScanning) const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _statusMessage,
-                        style: TextStyle(
-                          color: colorScheme.onPrimaryContainer.withOpacity(
-                            0.8,
-                          ),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+      body: _buildBody(context),
+    );
+  }
 
-          const SizedBox(height: 16.0),
-          // Device list
-          Expanded(
-            child: sortedDevices.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildBody(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Colors.redAccent,
+                size: 60,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Connection Error',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(_error!),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _fetchSystemInfo,
+                child: const Text('Try Again'),
+              ),
+              TextButton(
+                onPressed: _disconnect,
+                child: const Text('Disconnect'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Display System Info
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInfoCard(
+            context,
+            title: 'Connection Details',
+            details: {
+              'IP Address': widget.device.ip,
+              'Permanent ID (MAC)': widget.device.permanentId ?? 'N/A',
+            },
+            icon: Icons.link,
+          ),
+          const SizedBox(height: 20),
+          _buildInfoCard(
+            context,
+            title: 'System Overview',
+            details: {
+              'Operating System': _systemInfo!.osVersion,
+              'CPU Model': _systemInfo!.cpuModel,
+              'RAM Usage': _systemInfo!.ramUsage,
+            },
+            icon: Icons.dashboard,
+          ),
+          const SizedBox(height: 20),
+          _buildCpuLoadGauge(context, _systemInfo!.cpuLoadPercent),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(
+    BuildContext context, {
+    required String title,
+    required Map<String, String> details,
+    required IconData icon,
+  }) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Colors.teal.shade500),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const Divider(height: 20, thickness: 1),
+            ...details.entries
+                .map(
+                  (entry) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
                       children: [
-                        Icon(
-                          _isScanning ? Icons.search : Icons.devices_other,
-                          size: 64,
-                          color: colorScheme.outline,
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            '${entry.key}:',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _isScanning
-                              ? 'Scanning for devices...'
-                              : 'Tap "Scan" to begin device discovery',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: colorScheme.onSurfaceVariant,
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            entry.value,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
                     ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    itemCount: sortedDevices.length,
-                    itemBuilder: (context, index) {
-                      final device = sortedDevices[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 6,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                        ),
-                        elevation: 2,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 16,
-                          ),
-                          leading: CircleAvatar(
-                            backgroundColor: colorScheme.primary.withOpacity(
-                              0.1,
-                            ),
-                            child: Icon(
-                              Icons.computer,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                          title: Text(
-                            device.ip,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            device.openPorts.isNotEmpty
-                                ? 'Ports: ${device.openPorts.join(', ')}'
-                                : 'View details and Pair',
-                            style: TextStyle(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          trailing: Icon(
-                            Icons.chevron_right,
-                            color: colorScheme.tertiary,
-                          ),
-                          // Directly initiates the combined action
-                          onTap: () =>
-                              _showDeviceDetailsAndPairingOptions(device),
-                        ),
-                      );
-                    },
                   ),
-          ),
-        ],
+                )
+                .toList(),
+          ],
+        ),
       ),
-      // Floating button for control (hides on scroll down)
-      floatingActionButton: AnimatedSlide(
-        duration: const Duration(milliseconds: 300),
-        offset: _fabVisible ? Offset.zero : const Offset(0, 2),
-        curve: Curves.easeInOut,
-        child: FloatingActionButton.extended(
-          onPressed: _isScanning
-              ? () {
-                  _scanSubscription?.cancel();
-                  setState(() {
-                    _isScanning = false;
-                    _statusMessage = 'Scan cancelled';
-                  });
-                }
-              : _startScan,
-          icon: Icon(_isScanning ? Icons.stop : Icons.search),
-          label: Text(_isScanning ? 'Stop Scan' : 'Start Scan'),
-          backgroundColor: _isScanning
-              ? colorScheme.error
-              : colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
+    );
+  }
+
+  Widget _buildCpuLoadGauge(BuildContext context, double load) {
+    // Simple Circular Progress Indicator acting as a gauge for CPU Load
+    final color = load > 75
+        ? Colors.red
+        : load > 40
+        ? Colors.orange
+        : Colors.green;
+    final formattedLoad = load.toStringAsFixed(1);
+
+    return Center(
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              Text('CPU Load', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 120,
+                    height: 120,
+                    child: CircularProgressIndicator(
+                      value: load / 100,
+                      strokeWidth: 10,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                    ),
+                  ),
+                  Text(
+                    '$formattedLoad%',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
