@@ -1,0 +1,118 @@
+# How To Run the SayHi Spring Boot Backend
+
+Follow these steps to run your Spring Boot backend project for the SayHi app.
+
+---
+
+## 1. Prerequisites
+
+- **Java JDK 11** or later installed ([Download Here](https://adoptopenjdk.net/))
+- **Maven** installed ([Download Here](https://maven.apache.org/download.cgi))
+- (Optional) **IDE**: IntelliJ IDEA, Eclipse, or VS Code for easier management
+
+---
+
+## 2. Folder Structure
+
+Make sure your project folder is organized as follows:
+
+```
+sayhi/
+├── pom.xml
+└── src/
+    └── main/
+        ├── java/
+        │   └── com/
+        │       └── sayhi/
+        │           ├── controller/
+        │           ├── exception/
+        │           ├── model/
+        │           ├── repository/
+        │           └── service/
+        └── resources/
+            └── application.properties
+```
+
+---
+
+## 3. Building & Running
+
+### A. Using Maven (Terminal/Command Prompt)
+
+1. **Navigate to your project root**  
+   Open a terminal and run:
+   ```
+   cd path/to/sayhi
+   ```
+
+2. **Build the project**  
+   ```
+   mvn clean package
+   ```
+
+3. **Run the app**  
+   ```
+   mvn spring-boot:run
+   ```
+   Or, after packaging:
+   ```
+   java -jar target/sayhi-0.0.1-SNAPSHOT.jar
+   ```
+
+### B. Using an IDE
+
+1. **Open the project** in your IDE (as a Maven project).
+2. **Run** the main class:  
+   ```
+   com.sayhi.SayHiApplication
+   ```
+   (Right-click → Run)
+
+---
+
+## 4. API Endpoints
+
+Once running, your backend is available at:  
+**http://localhost:8080**
+
+### Example endpoints:
+
+- **Files**
+  - `GET    /files`           — List all files
+  - `GET    /files/{name}`    — Get file by name
+  - `POST   /files`           — Upload file (send JSON body)
+  - `DELETE /files/{name}`    — Delete file by name
+
+- **Users**
+  - `POST   /users`           — Add a user (send JSON body)
+  - `GET    /users`           — List all users
+  - `GET    /users/{username}`— Get user by username
+
+---
+
+## 5. H2 Database Console (Optional)
+
+Access the in-memory DB web console at:  
+`http://localhost:8080/h2-console`  
+- JDBC URL: `jdbc:h2:mem:testdb`
+- User: `sa`
+- Password: *(leave blank)*
+
+---
+
+## 6. Common Issues
+
+- Make sure ports are not blocked (default is 8080)
+- Use the correct Java version (11+)
+- If you add the FTP service, ensure you add the `commons-net` dependency in `pom.xml`
+
+---
+
+## 7. Stopping the App
+
+- In terminal: Press `Ctrl+C`
+- In IDE: Press the stop button
+
+---
+
+**You’re ready! The backend is now running and accessible.**
