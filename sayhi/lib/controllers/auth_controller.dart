@@ -1,32 +1,14 @@
-import '../models/user.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:hive/hive.dart';
+import '../models/user.dart';
 
 class AuthController {
   final String serverUrl;
   User? _currentUser;
-  late Box<User> _userBox;
 
-  AuthController(this.serverUrl) {
-    _userBox = Hive.box<User>('userBox');
-    _loadUser();
-  }
+  AuthController(this.serverUrl);
 
   User? get currentUser => _currentUser;
-
-  void _loadUser() {
-    _currentUser = _userBox.get('currentUser');
-  }
-
-  Future<void> _saveUser(User user) async {
-    await _userBox.put('currentUser', user);
-  }
-
-  Future<void> logout() async {
-    _currentUser = null;
-    await _userBox.delete('currentUser');
-  }
 
   Future<bool> login(String username, String password) async {
     if (username.isEmpty || password.isEmpty) {
@@ -40,10 +22,13 @@ class AuthController {
         body: json.encode({'username': username, 'password': password}),
       );
 
+      // Check both status code AND response body
       if (response.statusCode == 200) {
-        _currentUser = User(username: username, password: password);
-        await _saveUser(_currentUser!);
-        return true;
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['success'] == true) {
+          _currentUser = User(username: username, password: password);
+          return true;
+        }
       }
       return false;
     } catch (e) {
@@ -71,15 +56,29 @@ class AuthController {
         body: json.encode({'username': username, 'password': password}),
       );
 
+      // Check both status code AND response body
       if (response.statusCode == 200 || response.statusCode == 201) {
-        _currentUser = User(username: username, password: password);
-        await _saveUser(_currentUser!);
-        return true;
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['success'] == true) {
+          _currentUser = User(username: username, password: password);
+          return true;
+        }
       }
+
+      // Handle 409 Conflict (user already exists)
+      if (response.statusCode == 409) {
+        print('User already exists - only one user allowed');
+        return false;
+      }
+
       return false;
     } catch (e) {
       print('Signup error: $e');
       return false;
     }
+  }
+
+  void logout() {
+    _currentUser = null;
   }
 }
