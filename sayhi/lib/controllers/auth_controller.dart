@@ -1,6 +1,6 @@
-import '../models/user.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../models/user.dart';
 
 class AuthController {
   final String serverUrl;
@@ -22,9 +22,13 @@ class AuthController {
         body: json.encode({'username': username, 'password': password}),
       );
 
+      // Check both status code AND response body
       if (response.statusCode == 200) {
-        _currentUser = User(username: username, password: password);
-        return true;
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['success'] == true) {
+          _currentUser = User(username: username, password: password);
+          return true;
+        }
       }
       return false;
     } catch (e) {
@@ -52,10 +56,21 @@ class AuthController {
         body: json.encode({'username': username, 'password': password}),
       );
 
+      // Check both status code AND response body
       if (response.statusCode == 200 || response.statusCode == 201) {
-        _currentUser = User(username: username, password: password);
-        return true;
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['success'] == true) {
+          _currentUser = User(username: username, password: password);
+          return true;
+        }
       }
+
+      // Handle 409 Conflict (user already exists)
+      if (response.statusCode == 409) {
+        print('User already exists - only one user allowed');
+        return false;
+      }
+
       return false;
     } catch (e) {
       print('Signup error: $e');

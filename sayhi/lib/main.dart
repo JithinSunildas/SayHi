@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'views/ip_address_view.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'models/user.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+
+  Hive.registerAdapter(UserAdapter());
+  await Hive.openBox<User>('userBox');
   runApp(const MyApp());
 }
 
