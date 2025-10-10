@@ -15,6 +15,7 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody User user) {
         if (userService.signup(user.getUsername(), user.getPassword())) {
+            System.out.println("User signed up: " + user.getUsername());
             return ResponseEntity.status(201).build();
         }
         return ResponseEntity.badRequest().body("Username already exists");
@@ -23,6 +24,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User user) {
         if (userService.login(user.getUsername(), user.getPassword())) {
+            System.out.println("User logged in: " + user.getUsername());
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.status(401).body("Invalid credentials");
