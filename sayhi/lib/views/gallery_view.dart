@@ -60,7 +60,12 @@ class _GalleryViewState extends State<GalleryView> {
   void _previewPhoto(Photo photo) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => PhotoPreviewView(photo: photo)),
+      MaterialPageRoute(
+        builder: (context) => PhotoPreviewView(
+          photo: photo,
+          galleryController: _galleryController,
+        ),
+      ),
     );
   }
 

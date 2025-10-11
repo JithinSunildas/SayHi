@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/photo.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class GalleryController {
   final String serverUrl;
@@ -45,17 +47,27 @@ class GalleryController {
     }
   }
 
-  Future<bool> downloadPhoto(String photoUrl, String savePath) async {
+  Future<String?> downloadPhoto(Photo photo) async {
     try {
-      final response = await http.get(Uri.parse(photoUrl));
+      // Use the download URL which has proper content-disposition header
+      String downloadUrl = photo.url.replaceAll('/view', '/download');
+      final response = await http.get(Uri.parse(downloadUrl));
+
       if (response.statusCode == 200) {
-        // Save file logic here
-        return true;
+        // Get the downloads directory
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/${photo.name}';
+
+        // Write the file
+        final file = File(filePath);
+        await file.writeAsBytes(response.bodyBytes);
+
+        return filePath;
       }
-      return false;
+      return null;
     } catch (e) {
       print('Error downloading photo: $e');
-      return false;
+      return null;
     }
   }
 }
